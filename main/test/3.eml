@@ -1,0 +1,191 @@
+Received: from mow03-ex01.bizone.bi.zone (10.3.49.2) by
+ mow03-ex01.bizone.bi.zone (10.3.49.2) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.2.858.5
+ via Mailbox Transport; Tue, 8 Jun 2021 20:26:38 +0300
+Received: from mow03-ex01.bizone.bi.zone (10.3.49.2) by
+ mow03-ex01.bizone.bi.zone (10.3.49.2) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.2.858.5;
+ Tue, 8 Jun 2021 20:26:38 +0300
+Received: from msk-esg01.mss.bi.zone (10.3.49.30) by mail.bi.zone (10.3.49.2)
+ with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.2.858.5 via Frontend
+ Transport; Tue, 8 Jun 2021 20:26:38 +0300
+Received: (qmail 8037 invoked by uid 1002); 8 Jun 2021 20:26:38 +0300
+Received: from msk02-nsx-edge01.infra.msk02.bi.zone by mow02-fp01.mss.bi.zone (envelope-from <avmoiseev@hse.ru>, uid 1002) with 8029 
+ (Clear:RC:0(192.168.107.1):SA:0(-99.51/4):. 
+ Processed in 0.159121 secs); 08 Jun 2021 17:26:38 -0000
+X-Spam-Status: No, hits=-99.51 required=4
+X-BiZone.CESP-Info: BiZone.CESP (http://www.bi.zone)
+X-BiZone.CESP-Mail-From: avmoiseev@hse.ru via mow02-fp01.mss.bi.zone
+X-BiZone.CESP-MSGID: 06231731952130408029
+X-BiZone.CESP: 3.30-BiZone.CESP (Clear:RC:0(192.168.107.1):SA:0(-99.51/4):. Processed in 0.159121 secs Process 8029)
+Received: from msk02-nsx-edge01.infra.msk02.bi.zone (HELO msk-esg01.mss.bi.zone) (192.168.107.1)
+  by msk-esg01.mss.bi.zone with AES256-GCM-SHA384 encrypted SMTP; 8 Jun 2021 20:26:37 +0300
+DomainKey-Signature: a=rsa-sha1; c=nofws; d=hse.ru; h=from:to:cc:subject
+	:date:message-id:references:in-reply-to:content-type
+	:mime-version; q=dns; s=dkim1; b=rjtkf4fNQD1btPcb+bcfSiYAfxYx/is
+	r8BlS3bzsnn9/GzAF47HtvPUnk+zJMWax8+IpU9HNLLmTv5ykXEsfhvWtGs/n302
+	SvPxRUdujZs48nRlgbEI4+kc2imlXDSJtjt0ihdHYrjbUDB+sBXFGNlHOERlRdAY
+	ZFRGC7boEO/Q=
+DKIM-Signature: v=1; a=rsa-sha1; c=simple; d=hse.ru; h=from:to:cc
+	:subject:date:message-id:references:in-reply-to:content-type
+	:mime-version; s=dkim1; bh=nCG0COpTJ70V2YMj4IwCef/Gx5Y=; b=RZltF
+	DIWuTCnYQCuv3jIq0/DmWmtHFXJqFRycALBrQzQ81Vz0bDuqs0sbQhLbg2HPwXyl
+	Cb8H6zZyuD2diFmbl/Dtff/9S6zV+1Rt5Tw7m23VDEx6WZ7ICk1mgDMsTxyhDt6+
+	EuDKi8tZCqhJWmjOTCC+VpUWw+ZYC3ndZp7+WI=
+Received: (qmail 11597 invoked by uid 1002); 8 Jun 2021 20:26:35 +0300
+Received: from smtp.hse.ru by mow02-cesppr-fpo-02-01 (envelope-from <avmoiseev@hse.ru>, uid 1002) with 11489 
+Received: from smtp.hse.ru (HELO mail.hse.ru) (92.242.59.116)
+  by msk-esg01.mss.bi.zone with AES256-GCM-SHA384 encrypted SMTP; 8 Jun 2021 20:26:09 +0300
+Received: from mail11.staff.corp.local (172.21.210.101) by
+ mail9.staff.corp.local  with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.2176.14; Tue, 8 Jun 2021 20:26:01 +0300
+Received: from mail11.staff.corp.local ([fe80::d0c9:5466:75d5:2f13]) by
+ mail11.staff.corp.local ([fe80::d0c9:5466:75d5:2f13%4]) with mapi id
+ 15.01.1979.003; Tue, 8 Jun 2021 20:26:01 +0300
+From: =?utf-8?B?0JzQvtC40YHQtdC10LIg0JDQvdC00YDQtdC5INCS0LvQsNC00LjQvNC40YA=?=
+ =?utf-8?B?0L7QstC40Yc=?= <avmoiseev@hse.ru>
+To: BI.ZONE CESP <cesp.team@bi.zone>
+CC: =?utf-8?B?0KXQvtC80LrQviDQkNC70LXQutGB0LDQvdC00YAg0JLQu9Cw0LTQuNC80Lg=?=
+ =?utf-8?B?0YDQvtCy0LjRhw==?= <akhomko@hse.ru>
+Subject: FW: 
+Thread-Index: AQHXXITzkGVFlbf15U23QhYWE+su4KsKXYvg
+Date: Tue, 8 Jun 2021 17:26:01 +0000
+Message-ID: <275f231fa4a24815b8f89a03db34676f@hse.ru>
+References: <CAL5+47LSFrVCUVV28iEP8OAJoLX+XaX_f5dKpjij3hWoesyn9g@mail.gmail.com>
+In-Reply-To: <CAL5+47LSFrVCUVV28iEP8OAJoLX+XaX_f5dKpjij3hWoesyn9g@mail.gmail.com>
+Accept-Language: en-US, ru-RU
+Content-Language: ru-RU
+X-MS-Has-Attach: yes
+X-MS-TNEF-Correlator:
+x-originating-ip: [46.39.51.83]
+Content-Type: multipart/mixed;
+	boundary="_004_275f231fa4a24815b8f89a03db34676fhseru_"
+Return-Path: avmoiseev@hse.ru
+X-MS-Exchange-Organization-Network-Message-Id: bd62a5ca-b4ec-427f-a898-08d92aa29296
+X-MS-Exchange-Organization-AuthSource: mow03-ex01.bizone.bi.zone
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:00.4690584
+X-MS-Exchange-Processed-By-BccFoldering: 15.02.0858.002
+MIME-Version: 1.0
+
+--_004_275f231fa4a24815b8f89a03db34676fhseru_
+Content-Type: multipart/alternative;
+	boundary="_000_275f231fa4a24815b8f89a03db34676fhseru_"
+
+--_000_275f231fa4a24815b8f89a03db34676fhseru_
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+DQoNCkZyb206IGplc3NpY2FtZWlyIDxqZXNzaWNhbWVpcjA1MUBnbWFpbC5jb20+DQpTZW50OiBU
+dWVzZGF5LCBKdW5lIDgsIDIwMjEgNzozOSBQTQ0KU3ViamVjdDoNCg0K0JfQtNGA0LDQstGB0YLQ
+stGD0LnRgtC1LCDQvdCw0L/QuNGI0LjRgtC1INC80L3QtSDQvtGH0LXQvdGMINGB0YDQvtGH0L3Q
+vi4NCg==
+
+--_000_275f231fa4a24815b8f89a03db34676fhseru_
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PGh0bWwgeG1sbnM6dj0idXJuOnNjaGVtYXMtbWljcm9zb2Z0LWNvbTp2bWwiIHhtbG5zOm89InVy
+bjpzY2hlbWFzLW1pY3Jvc29mdC1jb206b2ZmaWNlOm9mZmljZSIgeG1sbnM6dz0idXJuOnNjaGVt
+YXMtbWljcm9zb2Z0LWNvbTpvZmZpY2U6d29yZCIgeG1sbnM6bT0iaHR0cDovL3NjaGVtYXMubWlj
+cm9zb2Z0LmNvbS9vZmZpY2UvMjAwNC8xMi9vbW1sIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv
+VFIvUkVDLWh0bWw0MCI+PGhlYWQ+DQo8bWV0YSBodHRwLWVxdWl2PSJDb250ZW50LVR5cGUiIGNv
+bnRlbnQ9InRleHQvaHRtbDsgY2hhcnNldD11dGYtOCI+DQo8bWV0YSBuYW1lPSJHZW5lcmF0b3Ii
+IGNvbnRlbnQ9Ik1pY3Jvc29mdCBXb3JkIDE1IChmaWx0ZXJlZCBtZWRpdW0pIj4NCjxzdHlsZT48
+IS0tDQovKiBGb250IERlZmluaXRpb25zICovDQpAZm9udC1mYWNlDQoJe2ZvbnQtZmFtaWx5OiJD
+YW1icmlhIE1hdGgiOw0KCXBhbm9zZS0xOjIgNCA1IDMgNSA0IDYgMyAyIDQ7fQ0KQGZvbnQtZmFj
+ZQ0KCXtmb250LWZhbWlseTpDYWxpYnJpOw0KCXBhbm9zZS0xOjIgMTUgNSAyIDIgMiA0IDMgMiA0
+O30NCi8qIFN0eWxlIERlZmluaXRpb25zICovDQpwLk1zb05vcm1hbCwgbGkuTXNvTm9ybWFsLCBk
+aXYuTXNvTm9ybWFsDQoJe21hcmdpbjowY207DQoJZm9udC1zaXplOjExLjBwdDsNCglmb250LWZh
+bWlseToiQ2FsaWJyaSIsc2Fucy1zZXJpZjt9DQpzcGFuLkVtYWlsU3R5bGUxOA0KCXttc28tc3R5
+bGUtdHlwZTpwZXJzb25hbC1yZXBseTsNCglmb250LWZhbWlseToiQ2FsaWJyaSIsc2Fucy1zZXJp
+ZjsNCgljb2xvcjp3aW5kb3d0ZXh0O30NCi5Nc29DaHBEZWZhdWx0DQoJe21zby1zdHlsZS10eXBl
+OmV4cG9ydC1vbmx5Ow0KCWZvbnQtZmFtaWx5OiJDYWxpYnJpIixzYW5zLXNlcmlmOw0KCW1zby1m
+YXJlYXN0LWxhbmd1YWdlOkVOLVVTO30NCkBwYWdlIFdvcmRTZWN0aW9uMQ0KCXtzaXplOjYxMi4w
+cHQgNzkyLjBwdDsNCgltYXJnaW46Mi4wY20gNDIuNXB0IDIuMGNtIDMuMGNtO30NCmRpdi5Xb3Jk
+U2VjdGlvbjENCgl7cGFnZTpXb3JkU2VjdGlvbjE7fQ0KLS0+PC9zdHlsZT48IS0tW2lmIGd0ZSBt
+c28gOV0+PHhtbD4NCjxvOnNoYXBlZGVmYXVsdHMgdjpleHQ9ImVkaXQiIHNwaWRtYXg9IjEwMjYi
+IC8+DQo8L3htbD48IVtlbmRpZl0tLT48IS0tW2lmIGd0ZSBtc28gOV0+PHhtbD4NCjxvOnNoYXBl
+bGF5b3V0IHY6ZXh0PSJlZGl0Ij4NCjxvOmlkbWFwIHY6ZXh0PSJlZGl0IiBkYXRhPSIxIiAvPg0K
+PC9vOnNoYXBlbGF5b3V0PjwveG1sPjwhW2VuZGlmXS0tPg0KPC9oZWFkPg0KPGJvZHkgbGFuZz0i
+UlUiIGxpbms9IiMwNTYzQzEiIHZsaW5rPSIjOTU0RjcyIiBzdHlsZT0id29yZC13cmFwOmJyZWFr
+LXdvcmQiPg0KPGRpdiBjbGFzcz0iV29yZFNlY3Rpb24xIj4NCjxwIGNsYXNzPSJNc29Ob3JtYWwi
+PjxzcGFuIHN0eWxlPSJtc28tZmFyZWFzdC1sYW5ndWFnZTpFTi1VUyI+PG86cD4mbmJzcDs8L286
+cD48L3NwYW4+PC9wPg0KPHAgY2xhc3M9Ik1zb05vcm1hbCI+PHNwYW4gc3R5bGU9Im1zby1mYXJl
+YXN0LWxhbmd1YWdlOkVOLVVTIj48bzpwPiZuYnNwOzwvbzpwPjwvc3Bhbj48L3A+DQo8ZGl2IHN0
+eWxlPSJib3JkZXI6bm9uZTtib3JkZXItdG9wOnNvbGlkICNFMUUxRTEgMS4wcHQ7cGFkZGluZzoz
+LjBwdCAwY20gMGNtIDBjbSI+DQo8cCBjbGFzcz0iTXNvTm9ybWFsIj48Yj5Gcm9tOjwvYj4gamVz
+c2ljYW1laXIgJmx0O2plc3NpY2FtZWlyMDUxQGdtYWlsLmNvbSZndDsgPGJyPg0KPGI+U2VudDo8
+L2I+IFR1ZXNkYXksIEp1bmUgOCwgMjAyMSA3OjM5IFBNPGJyPg0KPGI+U3ViamVjdDo8L2I+IDxv
+OnA+PC9vOnA+PC9wPg0KPC9kaXY+DQo8cCBjbGFzcz0iTXNvTm9ybWFsIj48bzpwPiZuYnNwOzwv
+bzpwPjwvcD4NCjxkaXY+DQo8cCBjbGFzcz0iTXNvTm9ybWFsIj7Ql9C00YDQsNCy0YHRgtCy0YPQ
+udGC0LUsINC90LDQv9C40YjQuNGC0LUg0LzQvdC1INC+0YfQtdC90Ywg0YHRgNC+0YfQvdC+Ljxv
+OnA+PC9vOnA+PC9wPg0KPC9kaXY+DQo8L2Rpdj4NCjwvYm9keT4NCjwvaHRtbD4NCg==
+
+--_000_275f231fa4a24815b8f89a03db34676fhseru_--
+
+--_004_275f231fa4a24815b8f89a03db34676fhseru_
+Content-Type: message/rfc822
+Content-Disposition: attachment;
+	creation-date="Tue, 08 Jun 2021 17:26:00 GMT";
+	modification-date="Tue, 08 Jun 2021 17:26:00 GMT"
+
+Received: from mail13.staff.corp.local (172.21.210.103) by
+ mail11.staff.corp.local (172.21.210.101) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id 15.1.1979.3
+ via Mailbox Transport; Tue, 8 Jun 2021 19:40:12 +0300
+Received: from mail9.staff.corp.local (192.168.100.151) by
+ mail13.staff.corp.local (172.21.210.103) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.1979.3; Tue, 8 Jun 2021 19:40:12 +0300
+Received: from msk-esg02.mss.bi.zone (192.168.0.129) by mail9.staff.corp.local
+ (192.168.100.151) with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id 15.1.2176.14 via Frontend
+ Transport; Tue, 8 Jun 2021 19:40:12 +0300
+Received: (qmail 22937 invoked by uid 1002); 8 Jun 2021 19:40:12 +0300
+Received: from mail-lf1-f52.google.com by mow02-fp04.mss.bi.zone (envelope-from <tekpaarmelle@gmail.com>, uid 1002) with 22606 
+ (Clear:RC:0(209.85.167.52):SA:0( 3.00 /4):. 
+ Processed in 27.544043 secs); 08 Jun 2021 16:40:12 -0000
+Received: from mail-lf1-f52.google.com (209.85.167.52)
+  by msk-esg02.mss.bi.zone with AES128-GCM-SHA256 encrypted SMTP; 8 Jun 2021 19:39:44 +0300
+Received: by mail-lf1-f52.google.com with SMTP id n12so26085584lft.10
+        for <antispam@hse.ru>; Tue, 08 Jun 2021 09:39:44 -0700 (PDT)
+From: jessicameir <jessicameir051@gmail.com>
+Subject:
+Thread-Index: AQHXXITzkGVFlbf15U23QhYWE+su4A==
+Date: Tue, 8 Jun 2021 16:38:55 +0000
+Message-ID: <CAL5+47LSFrVCUVV28iEP8OAJoLX+XaX_f5dKpjij3hWoesyn9g@mail.gmail.com>
+Content-Language: en-US
+X-MS-Exchange-Organization-AuthSource: mail9.staff.corp.local
+X-MS-Has-Attach:
+X-MS-Exchange-Organization-Network-Message-Id: 536e5a47-5e6b-4db4-9662-08d92a9c165c
+X-MS-TNEF-Correlator:
+X-MS-Exchange-Organization-RecordReviewCfmType: 0
+x-ms-exchange-organization-originalclientipaddress: 192.168.0.129
+x-ms-exchange-organization-originalserveripaddress: 192.168.100.151
+Content-Type: multipart/alternative;
+	boundary="_000_CAL547LSFrVCUVV28iEP8OAJoLXXaXf5dKpjij3hWoesyn9gmailgma_"
+MIME-Version: 1.0
+
+--_000_CAL547LSFrVCUVV28iEP8OAJoLXXaXf5dKpjij3hWoesyn9gmailgma_
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+0JfQtNGA0LDQstGB0YLQstGD0LnRgtC1LCDQvdCw0L/QuNGI0LjRgtC1INC80L3QtSDQvtGH0LXQ
+vdGMINGB0YDQvtGH0L3Qvi4NCg==
+
+--_000_CAL547LSFrVCUVV28iEP8OAJoLXXaXf5dKpjij3hWoesyn9gmailgma_
+Content-Type: text/html; charset="utf-8"
+Content-ID: <6C29ADEB5F667648801080336496F942@hse.ru>
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+DQo8bWV0YSBodHRwLWVxdWl2PSJDb250ZW50LVR5cGUiIGNvbnRlbnQ9InRl
+eHQvaHRtbDsgY2hhcnNldD11dGYtOCI+DQo8L2hlYWQ+DQo8Ym9keT4NCjxkaXYgZGlyPSJsdHIi
+PtCX0LTRgNCw0LLRgdGC0LLRg9C50YLQtSwg0L3QsNC/0LjRiNC40YLQtSDQvNC90LUg0L7Rh9C1
+0L3RjCDRgdGA0L7Rh9C90L4uPC9kaXY+DQo8L2JvZHk+DQo8L2h0bWw+DQo=
+
+--_000_CAL547LSFrVCUVV28iEP8OAJoLXXaXf5dKpjij3hWoesyn9gmailgma_--
+
+--_004_275f231fa4a24815b8f89a03db34676fhseru_--
