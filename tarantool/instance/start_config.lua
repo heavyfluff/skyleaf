@@ -47,7 +47,8 @@ box.once("bootstrap", function()
 	{name='subject', type='string'},
 	{name='status', type='string'},
 	{name='date', type='integer'},
-	{name='log', type='string'}
+	{name='log', type='string'},
+	{name='cid', type='string'}
 	})
 	box.schema.sequence.create('message_log_seq',{min=1, start=1,cycle=true})
 	message_log:create_index('id', {unique=true, type='tree', parts={'id'}, sequence='message_log_seq'})

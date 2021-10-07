@@ -39,7 +39,8 @@ def F_INSERT_OR_UPDATE_MESSAGE_LOG(space, data):
             data['smtpd_body_headers']['Subject'],
             data['smtps_rcp'][0]['to_addresses'][0]['status'],
             data['date_timestamp'],
-            json.dumps(data)))
+            json.dumps(data),
+            data['cid']))
     elif data['status'] == "from_queue":
         tr_return = space.update(data['smtps_db_id'],
                                  [('=', 5, data['smtps_rcp'][0]['to_addresses'][0]['status']),
@@ -125,7 +126,8 @@ def F_CHECK_BLOCKED(data, space):
         "",
         data['status'],
         data['date_timestamp'],
-        json.dumps(data)))
+        json.dumps(data),
+        data['cid']))
 
 
 def ADD_IN_DATABASE_ROW_EMAIL(data: str):

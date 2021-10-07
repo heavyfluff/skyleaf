@@ -63,7 +63,6 @@ class _DataState(enum.Enum):
     TOO_LONG = enum.auto()
     TOO_MUCH = enum.auto()
 
-
 AuthCallbackType = Callable[[str, bytes, bytes], bool]
 AuthenticatorType = Callable[["SMTP", "Session", "Envelope", str, Any], "AuthResult"]
 AuthMechanismType = Callable[["SMTP", List[str]], Awaitable[Any]]
@@ -1305,6 +1304,8 @@ class SMTP(asyncio.StreamReaderProtocol):
                 if GREYLITE_VALIDATION(self.session.peer[0], self.envelope.mail_from) is False:
                     await self.push('451 4.7.1 Please try again later')
                     logger.info("{}: Return: 451 4.7.1 Please try again later".format(self.cid))
+                    self.maindata.status = "blocked"
+                    self.maindata.add_in_db()
                     self.transport.close()
                     return
                 else:
@@ -1334,6 +1335,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                     self.maindata.add_in_db()
                     await self.push('550 X.7.23 SPF validation failed')
                     logger.info("{}: Return: 550 X.7.23 SPF validation failed".format(self.cid))
+                    self.transport.close()
                     return
             else:
                 logger.info("{}: SPF CHECK: spf ignored {}".format(self.cid, self.session.peer[0]))
@@ -1353,10 +1355,16 @@ class SMTP(asyncio.StreamReaderProtocol):
                 except dns.resolver.NXDOMAIN:
                     await self.push('501 Not found PTR')
                     logger.info("{}: Return: 501 Not found PTR".format(self.cid))
+                    self.maindata.status = "blocked"
+                    self.maindata.add_in_db()
+                    self.transport.close()
                     return
                 except dns.name.EmptyLabel:
                     await self.push('501 Not found PTR')
                     logger.info("{}: Return: 501 Not found PTR".format(self.cid))
+                    self.maindata.status = "blocked"
+                    self.maindata.add_in_db()
+                    self.transport.close()
                     return
                 except Exception:
                     key_pass = True
@@ -1388,6 +1396,9 @@ class SMTP(asyncio.StreamReaderProtocol):
                     logger.info("{}: Return: 501 5.1.8 You are not {}".format(self.cid,
                                                                               self.session.host_name))
                     await self.push('501 5.1.8 You are not {}'.format(self.session.host_name))
+                    self.maindata.status = "blocked"
+                    self.maindata.add_in_db()
+                    self.transport.close()
                     return
                 except Exception:
                     pass
@@ -1402,6 +1413,9 @@ class SMTP(asyncio.StreamReaderProtocol):
                     logger.info("{}: Return: 501 5.1.8 You are not {}".format(self.cid,
                                                                               self.session.host_name))
                     await self.push('501 5.1.8 You are not {}'.format(self.session.host_name))
+                    self.maindata.status = "blocked"
+                    self.maindata.add_in_db()
+                    self.transport.close()
                     return
 
             status = '250 OK'
