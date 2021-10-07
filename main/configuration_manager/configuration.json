@@ -8,7 +8,7 @@
     "node": {
         "description": "",
         "type": "incomming",
-        "bind_address": "172.16.20.11",
+        "bind_address": "0.0.0.0",
         "bind_port": 25,
         "hostname": "SKYLEAF"
     },
@@ -30,10 +30,10 @@
         "queue": 1
     },
     "domains": {
-        "pavlov.ru": {
-            "domain": "pavlov.ru",
-            "dst_port": 1025,
-            "dst_ip": "172.16.20.14",
+        "skyleaf.mss.bi.zone": {
+            "domain": "skyleaf.mss.bi.zone",
+            "dst_port": 25,
+            "dst_ip": "10.3.137.10",
             "date": 1,
             "description": "description",
             "thresholds": {
@@ -48,8 +48,8 @@
         },
         "test.ru": {
             "domain": "test.ru",
-            "dst_port": 1026,
-            "dst_ip": "172.16.20.14",
+            "dst_port": 25,
+            "dst_ip": "10.3.137.10",
             "date": 1,
             "description": "description",
             "thresholds": {

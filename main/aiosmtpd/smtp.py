@@ -7,10 +7,9 @@ import inspect
 import logging
 import re
 import socket
-import json
+import uuid
 import ssl
-import os
-from datetime import timedelta, datetime
+from datetime import datetime
 from base64 import b64decode, b64encode
 from email._header_value_parser import get_addr_spec, get_angle_addr
 from email.errors import HeaderParseError
@@ -27,22 +26,23 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
-    Union,
-)
+    Union)
 from warnings import warn
 
 import attr
 from public import public
 
 from aiosmtpd import __version__
-from aiosmtpd.proxy_protocol import ProxyData, get_proxy
+from aiosmtpd.proxy_protocol import ProxyData
 
-from system.other import TARANTOOL_CONN, GET_CONF_FROM_MEM, ENCODED_BASE
+from system.other import TARANTOOL_CONN, GET_CONF_FROM_MEM
 from smtp_an.general_func import VALIDATION_PRIVATE_IP
+from smtp_dem.smtpd_system import GREYLITE_VALIDATION
 from system.system_class import MainData
 from aiosmtpd.spf import check2
-#from dns import reversename, resolver
-import dns.reversename, dns.resolver
+# from dns import reversename, resolver
+import dns.reversename
+import dns.resolver
 from loguru import logger
 
 
@@ -78,12 +78,10 @@ DecoratorType = Callable[[Callable[..., RT]], Callable[..., RT]]
 
 # region #### Constant & Constant-likes ###############################################
 
-__all__ = [
-    "AuthCallbackType",
-    "AuthMechanismType",
-    "MISSING",
-    "__version__",
-]    # Will be added to by @public
+__all__ = ["AuthCallbackType",
+           "AuthMechanismType",
+           "MISSING",
+           "__version__"]    # Will be added to by @public
 __ident__ = 'Python SMTP {}'.format(__version__)
 log = logging.getLogger('mail.log')
 
@@ -110,18 +108,8 @@ CLIENT_AUTH_B = re.compile(
     br"(\S+)"
     # Optional bCRLF at end. Why optional? Because we also want to sanitize the
     # stripped line. If no bCRLF, then this group will be b""
-    br"(?P<crlf>(?:\r\n)?)", re.IGNORECASE
-)
+    br"(?P<crlf>(?:\r\n)?)", re.IGNORECASE)
 """Regex that matches 'AUTH <mech> <param>' commend"""
-
-# endregion
-
-
-
-
-
-
-        
 
 
 @attr.s
@@ -194,17 +182,13 @@ class Session:
 
     @property
     def login_data(self) -> Any:
-        """Legacy login_data, usually containing the username"""
-        log.warning(
-            "Session.login_data is deprecated and will be removed in version 2.0"
-        )
+        """Legacy login_data, usually containing the username."""
+        logger.warning("Session.login_data is deprecated and will be removed in version 2.0")
         return self._login_data
 
     @login_data.setter
     def login_data(self, value: Any) -> None:
-        log.warning(
-            "Session.login_data is deprecated and will be removed in version 2.0"
-        )
+        logger.warning("Session.login_data is deprecated and will be removed in version 2.0")
         self._login_data = value
 
 
@@ -218,13 +202,8 @@ class Envelope:
         self.original_content = None
         self.rcpt_tos = []
         self.rcpt_options = []
-        
-        
 
 
-# This is here to enable debugging output when the -E option is given to the
-# unit test suite.    In that case, this function is mocked to set the debug
-# level on the loop (as if PYTHONASYNCIODEBUG=1 were set).
 def make_loop() -> asyncio.AbstractEventLoop:
     return asyncio.get_event_loop()
 
@@ -249,12 +228,7 @@ def syntax(text: str, extended: str = None, when: Optional[str] = None) -> Decor
 
 @public
 def auth_mechanism(actual_name: str) -> DecoratorType:
-    """
-    A @decorator to explicitly specifies the name of the AUTH mechanism implemented by
-    the function/method this decorates
-    :param actual_name: Name of AUTH mechanism. Must consists of [A-Z0-9_-] only.
-        Will be converted to uppercase
-    """
+
     def decorator(f: Callable[..., RT]) -> Callable[..., RT]:
         f.__auth_mechanism_name__ = actual_name
         return f
@@ -265,9 +239,7 @@ def auth_mechanism(actual_name: str) -> DecoratorType:
     return decorator
 
 
-def login_always_fail(
-        mechanism: str, login: bytes, password: bytes
-) -> bool:
+def login_always_fail(mechanism: str, login: bytes, password: bytes) -> bool:
     return False
 
 
@@ -295,8 +267,7 @@ def sanitized_log(func: Callable[..., None], msg: AnyStr, *args, **kwargs) -> No
     """
     sanitized_args = [
         sanitize(a) if isinstance(a, bytes) else a
-        for a in args
-    ]
+        for a in args]
     func(msg, *sanitized_args, **kwargs)
 
 
@@ -345,8 +316,8 @@ class SMTP(asyncio.StreamReaderProtocol):
             authenticator: AuthenticatorType = None,
             proxy_protocol_timeout: Optional[Union[int, float]] = None,
             loop: asyncio.AbstractEventLoop = None,
-            address_in_mem = ""
-    ):
+            address_in_mem=""):
+
         self.__ident__ = ident or __ident__
         self.loop = loop if loop else make_loop()
         super().__init__(
@@ -367,12 +338,12 @@ class SMTP(asyncio.StreamReaderProtocol):
         if tls_context:
             if (tls_context.verify_mode
                     not in {ssl.CERT_NONE, ssl.CERT_OPTIONAL}):    # noqa: DUO122
-                log.warning("tls_context.verify_mode not in {CERT_NONE, "
-                            "CERT_OPTIONAL}; this might cause client "
-                            "connection problems")
+                logger.warning("tls_context.verify_mode not in {CERT_NONE, "
+                               "CERT_OPTIONAL}; this might cause client "
+                               "connection problems")
             elif tls_context.check_hostname:
-                log.warning("tls_context.check_hostname == True; "
-                            "this might cause client connection problems")
+                logger.warning("tls_context.check_hostname == True; "
+                               "this might cause client connection problems")
         self.require_starttls = tls_context and require_starttls
         self._timeout_duration = timeout
         self._timeout_handle = None
@@ -383,21 +354,22 @@ class SMTP(asyncio.StreamReaderProtocol):
         self.envelope: Optional[Envelope] = None
         self.maindata: Optional[MainData] = None
         self.address_configuration = address_in_mem
-        
+        self.cid = ""
+
         self.transport = None
-        
+
         self._handler_coroutine = None
         if not auth_require_tls and auth_required:
             warn("Requiring AUTH while not requiring TLS "
                  "can lead to security vulnerabilities!")
-            log.warning("auth_required == True but auth_require_tls == False")
+            logger.warning("auth_required == True but auth_require_tls == False")
         self._auth_require_tls = auth_require_tls
 
         if proxy_protocol_timeout is not None:
             if proxy_protocol_timeout <= 0:
                 raise ValueError("proxy_protocol_timeout must be > 0")
             elif proxy_protocol_timeout < 3.0:
-                log.warning("proxy_protocol_timeout < 3.0")
+                logger.warning("proxy_protocol_timeout < 3.0")
         self._proxy_timeout = proxy_protocol_timeout
 
         self._authenticator: Optional[AuthenticatorType]
@@ -415,26 +387,21 @@ class SMTP(asyncio.StreamReaderProtocol):
         self._auth_methods: Dict[str, _AuthMechAttr] = {
             getattr(
                 mfunc, "__auth_mechanism_name__",
-                mname.replace("auth_", "").replace("__", "-")
-            ): _AuthMechAttr(mfunc, obj is self)
+                mname.replace("auth_", "").replace("__", "-")): _AuthMechAttr(mfunc, obj is self)
             for obj in (self, handler)
             for mname, mfunc in inspect.getmembers(obj)
-            if mname.startswith("auth_")
-        }
+            if mname.startswith("auth_")}
         for m in (auth_exclude_mechanism or []):
             self._auth_methods.pop(m, None)
-        log.info(
+        logger.info(
             "Available AUTH mechanisms: "
             + " ".join(
                 m + "(builtin)" if impl.is_builtin else m
-                for m, impl in sorted(self._auth_methods.items())
-            )
-        )
+                for m, impl in sorted(self._auth_methods.items())))
         self._handle_hooks: Dict[str, Callable] = {
             m.replace("handle_", ""): getattr(handler, m)
             for m in dir(handler)
-            if m.startswith("handle_")
-        }
+            if m.startswith("handle_")}
 
         # When we've deprecated the 4-arg form of handle_EHLO,
         # we can -- and should -- remove this whole code block
@@ -458,8 +425,7 @@ class SMTP(asyncio.StreamReaderProtocol):
         self._smtp_methods: Dict[str, Any] = {
             m.replace("smtp_", ""): getattr(self, m)
             for m in dir(self)
-            if m.startswith("smtp_")
-        }
+            if m.startswith("smtp_")}
 
         self._call_limit_default: int
         if command_call_limit is None:
@@ -474,8 +440,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                     raise TypeError("All command_call_limit values must be int")
                 self._call_limit_base = command_call_limit
                 self._call_limit_default = command_call_limit.get(
-                    "*", CALL_LIMIT_DEFAULT
-                )
+                    "*", CALL_LIMIT_DEFAULT)
             else:
                 raise TypeError("command_call_limit must be int or Dict[str, int]")
 
@@ -484,7 +449,7 @@ class SMTP(asyncio.StreamReaderProtocol):
 
     def _create_envelope(self) -> Envelope:
         return Envelope()
-        
+
     def _create_maindata(self) -> MainData:
         return MainData()
 
@@ -538,13 +503,13 @@ class SMTP(asyncio.StreamReaderProtocol):
         else:
             super().connection_made(transport)
             self.transport = transport
-            log.info('Peer: %r', self.session.peer)
+            # logger.info('Peer: %r', self.session.peer)
             # Process the client's requests.
             self._handler_coroutine = self.loop.create_task(
                 self._handle_client())
 
     def connection_lost(self, error: Optional[Exception]) -> None:
-        log.info('%r connection lost', self.session.peer)
+        logger.info("{}: Connection lost".format(self.cid))
         self._timeout_handle.cancel()
         # If STARTTLS was issued, then our transport is the SSL protocol
         # transport, and we need to close the original transport explicitly,
@@ -558,7 +523,7 @@ class SMTP(asyncio.StreamReaderProtocol):
         self.transport = None
 
     def eof_received(self) -> bool:
-        log.info('%r EOF received', self.session.peer)
+        logger.info('%r EOF received', self.session.peer)
         self._handler_coroutine.cancel()
         if self.session.ssl is not None:
             # If STARTTLS was issued, return False, because True has no effect
@@ -570,21 +535,17 @@ class SMTP(asyncio.StreamReaderProtocol):
     def _reset_timeout(self, duration: float = None) -> None:
         if self._timeout_handle is not None:
             self._timeout_handle.cancel()
-        self._timeout_handle = self.loop.call_later(
-            duration or self._timeout_duration, self._timeout_cb
-        )
+        self._timeout_handle = self.loop.call_later(duration or self._timeout_duration, self._timeout_cb)
 
     def _timeout_cb(self):
-        log.info('%r connection timeout', self.session.peer)
+        logger.info('%r connection timeout', self.session.peer)
 
         # Calling close() on the transport will trigger connection_lost(),
         # which gracefully closes the SSL transport if required and cleans
         # up state.
         self.transport.close()
 
-    def _client_connected_cb(
-            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ):
+    def _client_connected_cb(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         # This is redundant since we subclass StreamReaderProtocol, but I like
         # the shorter names.
         self._reader = reader
@@ -594,6 +555,7 @@ class SMTP(asyncio.StreamReaderProtocol):
         """Reset state variables to their post-DATA state."""
         self.envelope = self._create_envelope()
         self.maindata = self._create_maindata()
+
     def _set_rset_state(self):
         """Reset all state variables except the greeting."""
         self._set_post_data_state()
@@ -606,7 +568,7 @@ class SMTP(asyncio.StreamReaderProtocol):
             response = status
         assert isinstance(response, bytes)
         self._writer.write(response + b"\r\n")
-        log.debug("%r << %r", self.session.peer, response)
+        # logger.debug("%r << %r", self.session.peer, response)
         await self._writer.drain()
 
     async def handle_exception(self, error: Exception) -> str:
@@ -614,104 +576,52 @@ class SMTP(asyncio.StreamReaderProtocol):
             status = await self.event_handler.handle_exception(error)
             return status
         else:
-            log.exception('%r SMTP session exception', self.session.peer)
+            logger.exception('%r SMTP session exception', self.session.peer)
             status = '500 Error: ({}) {}'.format(
                 error.__class__.__name__, str(error))
             return status
 
     async def _handle_client(self):
-        '''
-        log.info('%r handling connection', self.session.peer)
-        if self._proxy_timeout is not None:
-            self._reset_timeout(self._proxy_timeout)
-            log.debug("%r waiting PROXY handshake", self.session.peer)
-            self.session.proxy_data = await get_proxy(self._reader)
-            if self.session.proxy_data:
-                log.info("%r valid PROXY handshake", self.session.peer)
-                status = await self._call_handler_hook("PROXY", self.session.proxy_data)
-                log.debug("%r handle_PROXY returned %r", self.session.peer, status)
-            else:
-                log.warning("%r invalid PROXY handshake", self.session.peer)
-                status = False
-            if status is MISSING or not status:
-                log.info("%r rejected by handle_PROXY", self.session.peer)
-                self.transport.close()
-                return
-            self._reset_timeout()
-        '''
-        
+
+        self.cid = str(uuid.uuid4())
         ##################################################################
         #     GLOBAL FILTER LIST
-        #     GREYLITE
         ##################################################################
-        ###--- LOAD GLOBAL FILTER LIST ---###
+        # LOAD GLOBAL FILTER LIST ---###
+        j_config = GET_CONF_FROM_MEM(self.address_configuration)
+        logger.info("{}: Open new conection from {}".format(self.cid,
+                                                            self.session.peer[0]))
         sp_global_filter_list, tarantool_space_status = TARANTOOL_CONN('global_filter_list')
         if tarantool_space_status:
+            logger.info("{}: Check in global filter list.".format(self.cid))
             tr_result = sp_global_filter_list.select(self.session.peer[0])
             if tr_result.rowcount > 0:
+                logger.info("{}: Returned global filter list rule {}".format(self.cid,
+                                                                             tr_result[0][1]))
                 self.session.glb_filter_list = tr_result[0][1].split(",")
-                
-            ###--- CHECK GLOBAL FILTER LIST deny ---###
+
+            # CHECK GLOBAL FILTER LIST deny ---###
+
             if "deny" in self.session.glb_filter_list:
+                logger.info("{}: Global filter list is Deny host {}".format(self.cid,
+                                                                            self.session.peer[0]))
                 logger.info("GLOBAL_FILTER_LIST: Deny host {}.".format(self.session.peer[0]))
                 self.transport.close()
                 return
-        
-        ###--- CHECK GLOBAL FILTER LIST ignore_greylite---###
-        j_config = GET_CONF_FROM_MEM(self.address_configuration)
-        if "ignore_greylite" not in self.session.glb_filter_list and j_config['node']['type'] == "incomming" and VALIDATION_PRIVATE_IP(self.session.peer[0]):
-            status = False
-            now = datetime.now()
-            #int(now.timestamp())
-            sp_greylite, tarantool_space_status = TARANTOOL_CONN('greylite')
-            if tarantool_space_status:
-                tr_result = sp_greylite.select(self.session.peer[0])
-                if tr_result.rowcount > 0:
-                    if tr_result[0][1] >= j_config['greylite']['count_treshold']:
-                        logger.info("GREYLITE: Validate successfully for {}".format(self.session.peer[0]))
-                        status = True
-                    else:
-                        if (tr_result[0][2]+j_config['greylite']['time_between_trys']) < int(now.timestamp()):
-                            try:
-                                sp_greylite.update(self.session.peer[0],[('+',1,1),('=',2,int(now.timestamp()))])
-                                logger.info("GREYLITE: Update in tarantool greylite for {}".format(self.session.peer[0]))
-                            except Exception as e:
-                                logger.error(str(e))
-                                logger.error("GREYLITE: Can't update in tarantool greylite for {}".format(self.session.peer[0]))
-                        else:
-                            logger.info("GREYLITE: Connect from {} in not time.".format(self.session.peer[0]))
-                else:
-                    try:
-                        sp_greylite.insert((self.session.peer[0],1,int(now.timestamp())))
-                        logger.info("GREYLITE: Insert in tarantool greylite {}".format(self.session.peer[0]))
-                    except Exception as e:
-                        logger.error(str(e))
-                        logger.error("GREYLITE: Can't insert in tarantool greylite {}".format(self.session.peer[0]))
-        else:
-            logger.info("GREYLITE: Ignore {}".format(self.session.peer[0]))
-            status = True
-        if status:
-            pass
-        else:
-            await self.push('451 4.7.1 Greylisting in action, please come back later.')
-            self.transport.close()
-            return
-        
-        #await self.push('220 {} {}'.format(self.hostname, self.__ident__))
+
         await self.push('220 {}'.format(j_config['node']['hostname']))
-        
-        
+
         if self._enforce_call_limit:
             call_limit = collections.defaultdict(
                 lambda x=self._call_limit_default: x,
-                self._call_limit_base
-            )
+                self._call_limit_base)
         else:
             # Not used, but this silences code inspection tools
             call_limit = {}
         bogus_budget = BOGUS_LIMIT
 
         while self.transport is not None:     # pragma: nobranch
+
             try:
                 try:
                     line: bytes = await self._reader.readuntil()
@@ -730,10 +640,11 @@ class SMTP(asyncio.StreamReaderProtocol):
                     # send error response and read the next command line.
                     await self.push('500 Command line too long')
                     continue
-                sanitized_log(log.debug, '_handle_client readline: %r', line)
+
+                # sanitized_log(logger.debug, '_handle_client readline: %r', line)
                 # XXX this rstrip may not completely preserve old behavior.
                 line = line.rstrip(b'\r\n')
-                sanitized_log(log.info, '%r >> %r', self.session.peer, line)
+                # sanitized_log(logger.info, '%r >> %r', self.session.peer, line)
                 if not line:
                     await self.push('500 Error: bad syntax')
                     continue
@@ -743,6 +654,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                 # UTF-8/surrogateescape so that non-UTF-8 data can be
                 # re-encoded back to the original bytes when the SMTP command
                 # is handled.
+
                 try:
                     command = command.upper().decode(encoding='ascii')
                 except UnicodeDecodeError:
@@ -771,11 +683,11 @@ class SMTP(asyncio.StreamReaderProtocol):
                             await self.push('500 Error: strict ASCII mode')
                             # Should we await self.handle_exception()?
                             continue
+
                 max_sz = (
                     self.command_size_limits[command]
                     if self.session.extended_smtp
-                    else self.command_size_limit
-                )
+                    else self.command_size_limit)
                 if len(line) > max_sz:
                     await self.push('500 Command line too long')
                     continue
@@ -783,44 +695,42 @@ class SMTP(asyncio.StreamReaderProtocol):
                     await self.push(
                         '554 Command refused due to lack of security')
                     continue
-                
+
                 ###################################################
                 #             TLS_MANDATORY                                                         #
                 ###################################################
+                logger.info("{}: Check in TLS mandatory.".format(self.cid))
                 j_config = GET_CONF_FROM_MEM(self.address_configuration)
-                if "tls_mandatory" in self.session.glb_filter_list and j_config['node']['type'] == "incomming":
+                if "tls_mandatory" in self.session.glb_filter_list \
+                        and j_config['node']['type'] == "incomming":
                     if (self.require_starttls and not self._tls_protocol and command not in ALLOWED_BEFORE_STARTTLS):
                         # RFC3207 part 4
                         await self.push('530 Must issue a STARTTLS command first.')
                         continue
-                
+
                 if self._enforce_call_limit:
                     budget = call_limit[command]
                     if budget < 1:
-                        log.warning(
-                            "%r over limit for %s", self.session.peer, command
-                        )
+                        logger.warning(
+                            "%r over limit for %s", self.session.peer, command)
                         await self.push(
-                            f"421 4.7.0 {command} sent too many times"
-                        )
+                            f"421 4.7.0 {command} sent too many times")
                         self.transport.close()
                         continue
                     call_limit[command] = budget - 1
 
                 method = self._smtp_methods.get(command)
                 if method is None:
-                    log.warning("%r unrecognised: %s", self.session.peer, command)
+                    # logger.warning("%r unrecognised: %s", self.session.peer, command)
                     bogus_budget -= 1
                     if bogus_budget < 1:
-                        log.warning("%r too many bogus commands", self.session.peer)
+                        logger.warning("%r too many bogus commands", self.session.peer)
                         await self.push(
-                            "502 5.5.1 Too many unrecognized commands, goodbye."
-                        )
+                            "502 5.5.1 Too many unrecognized commands, goodbye.")
                         self.transport.close()
                         continue
                     await self.push(
-                        f'500 Error: command "{command}" not recognized'
-                    )
+                        f'500 Error: command "{command}" not recognized')
                     continue
 
                 # Received a valid command, reset the timer.
@@ -830,13 +740,11 @@ class SMTP(asyncio.StreamReaderProtocol):
                 # The connection got reset during the DATA command.
                 # XXX If handler method raises ConnectionResetError, we should
                 # verify that it was actually self._reader that was reset.
-                log.info('%r Connection lost during _handle_client()',
-                         self.session.peer)
+                # logger.info("{}: Connection lost during _handle_client()".format(self.cid))
                 self._writer.close()
                 raise
             except ConnectionResetError:
-                log.info('%r Connection lost during _handle_client()',
-                         self.session.peer)
+                logger.info("{}: Connection lost during _handle_client()".format(self.cid))
                 self._writer.close()
                 raise
             except Exception as error:
@@ -845,8 +753,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                     status = await self.handle_exception(error)
                 except Exception as inner_error:
                     try:
-                        log.exception('%r Exception in handle_exception()',
-                                        self.session.peer)
+                        logger.exception('%r Exception in handle_exception()', self.session.peer)
                         status = '500 Error: ({}) {}'.format(
                             inner_error.__class__.__name__, str(inner_error))
                     except Exception:
@@ -876,7 +783,7 @@ class SMTP(asyncio.StreamReaderProtocol):
         :return: True if AUTH is needed
         """
         if self._auth_required and not self.session.authenticated:
-            log.info(f'{caller_method}: Authentication required')
+            logger.info(f'{caller_method}: Authentication required')
             await self.push('530 5.7.0 Authentication required')
             return True
         return False
@@ -888,7 +795,6 @@ class SMTP(asyncio.StreamReaderProtocol):
             await self.push('501 Syntax: HELO hostname')
             return
 
-        
         self._set_rset_state()
         self.session.extended_smtp = False
         status = await self._call_handler_hook('HELO', hostname)
@@ -925,10 +831,7 @@ class SMTP(asyncio.StreamReaderProtocol):
             warn('Use handler.handle_EHLO() instead of .ehlo_hook()',
                  DeprecationWarning)
             await self.ehlo_hook()
-        
-        
-        
-        
+
         if self._ehlo_hook_ver is None:
             self.session.host_name = hostname
             response.append('250 HELP')
@@ -996,9 +899,11 @@ class SMTP(asyncio.StreamReaderProtocol):
         try:
             await waiter
         except asyncio.CancelledError:
-            raise
+            logger.error("asyncio.CancelledError")
+            # raise
         except Exception as error:
-            raise TLSSetupException() from error
+            logger.error("TLSSetupException")
+            # raise TLSSetupException() from error
 
     @syntax("AUTH <mechanism>")
     async def smtp_AUTH(self, arg: str) -> None:
@@ -1007,8 +912,7 @@ class SMTP(asyncio.StreamReaderProtocol):
         elif not self.session.extended_smtp:
             return await self.push("500 Error: command 'AUTH' not recognized")
         elif self._auth_require_tls and not self._tls_protocol:
-            return await self.push("538 5.7.11 Encryption required for requested "
-                                     "authentication mechanism")
+            return await self.push("538 5.7.11 Encryption required for requested authentication mechanism")
         elif self.session.authenticated:
             return await self.push('503 Already authenticated')
         elif not arg:
@@ -1027,15 +931,14 @@ class SMTP(asyncio.StreamReaderProtocol):
         status = await self._call_handler_hook('AUTH', args)
         if status is MISSING:
             auth_method = self._auth_methods[mechanism]
-            log.debug(
+            logger.debug(
                 "Using %s auth_ hook for %r",
                 "builtin" if auth_method.is_builtin else "handler",
-                mechanism
-            )
+                mechanism)
             # Pass 'self' to method so external methods can leverage this
             # class's helper methods such as push()
             auth_result = await auth_method.method(self, args)
-            log.debug("auth_%s returned %r", mechanism, auth_result)
+            logger.debug("auth_%s returned %r", mechanism, auth_result)
 
             # New system using `authenticator` and AuthResult
             if isinstance(auth_result, AuthResult):
@@ -1075,8 +978,7 @@ class SMTP(asyncio.StreamReaderProtocol):
             self,
             challenge: AnyStr,
             encode_to_b64: bool = True,
-            log_client_response: bool = False,
-    ) -> Union[_Missing, bytes]:
+            log_client_response: bool = False) -> Union[_Missing, bytes]:
         """
         Send challenge during authentication. "334 " will be prefixed, so do NOT
         put "334 " at start of server_message.
@@ -1088,31 +990,30 @@ class SMTP(asyncio.StreamReaderProtocol):
         :return: Response from client, or MISSING
         """
         challenge = (
-            challenge.encode() if isinstance(challenge, str) else challenge
-        )
+            challenge.encode() if isinstance(challenge, str) else challenge)
         assert isinstance(challenge, bytes)
         # Trailing space is MANDATORY even if challenge is empty.
         # See:
         #     - https://tools.ietf.org/html/rfc4954#page-4 ¶ 5
         #     - https://tools.ietf.org/html/rfc4954#page-13 "continue-req"
         challenge = b"334 " + (b64encode(challenge) if encode_to_b64 else challenge)
-        log.debug("%r << challenge: %r", self.session.peer, challenge)
+        logger.debug("%r << challenge: %r", self.session.peer, challenge)
         await self.push(challenge)
         line = await self._reader.readline()
         if log_client_response:
             warn("AUTH interaction logging is enabled!")
             warn("Sensitive information might be leaked!")
-            log.debug("%r >> %r", self.session.peer, line)
+            # logger.debug("%r >> %r", self.session.peer, line)
         blob: bytes = line.strip()
         # '*' handling in accordance with RFC4954
         if blob == b"*":
-            log.warning("%r aborted AUTH with '*'", self.session.peer)
+            logger.warning("%r aborted AUTH with '*'", self.session.peer)
             await self.push("501 5.7.0 Auth aborted")
             return MISSING
         try:
             decoded_blob = b64decode(blob, validate=True)
         except binascii.Error:
-            log.debug("%r can't decode base64: %s", self.session.peer, blob)
+            logger.debug("%r can't decode base64: %s", self.session.peer, blob)
             await self.push("501 5.5.2 Can't decode base64")
             return MISSING
         return decoded_blob
@@ -1121,25 +1022,21 @@ class SMTP(asyncio.StreamReaderProtocol):
 
     async def _auth_interact(
             self,
-            server_message: str
-    ) -> Union[_Missing, bytes]:    # pragma: nocover
+            server_message: str) -> Union[_Missing, bytes]:    # pragma: nocover
         warn(
             "_auth_interact will be deprecated in version 2.0. "
             "Please use challenge_auth() instead.",
-            DeprecationWarning
-        )
+            DeprecationWarning)
         return await self.challenge_auth(
             challenge=self._334_PREFIX.sub("", server_message),
-            encode_to_b64=False,
-        )
+            encode_to_b64=False)
 
     def _authenticate(self, mechanism: str, auth_data: Any) -> AuthResult:
         if self._authenticator is not None:
             # self.envelope is likely still empty, but we'll pass it anyways to
             # make the invocation similar to the one in _call_handler_hook
             return self._authenticator(
-                self, self.session, self.envelope, mechanism, auth_data
-            )
+                self, self.session, self.envelope, mechanism, auth_data)
         else:
             assert self._auth_callback is not None
             assert isinstance(auth_data, LoginPassword)
@@ -1246,8 +1143,7 @@ class SMTP(asyncio.StreamReaderProtocol):
         return address, rest
 
     def _getparams(
-            self, params: Sequence[str]
-    ) -> Optional[Dict[str, Union[str, bool]]]:
+            self, params: Sequence[str]) -> Optional[Dict[str, Union[str, bool]]]:
         # Return params as dictionary. Return None if not all parameters
         # appear to be syntactically valid according to RFC 1869.
         result = {}
@@ -1275,8 +1171,7 @@ class SMTP(asyncio.StreamReaderProtocol):
             method = self._smtp_methods.get(arg.upper())
             if method and self._syntax_available(method):
                 help_str = method.__smtp_syntax__
-                if (self.session.extended_smtp
-                        and method.__smtp_syntax_extended__):
+                if (self.session.extended_smtp and method.__smtp_syntax_extended__):
                     help_str += method.__smtp_syntax_extended__
                 await self.push('250 Syntax: ' + help_str)
                 return
@@ -1334,9 +1229,6 @@ class SMTP(asyncio.StreamReaderProtocol):
             await self.push('503 Error: nested MAIL command')
             return
 
-        
-        
-        
         now = datetime.now()
         self.maindata.date_timestamp = int(now.timestamp())
         self.maindata.date_string = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -1344,19 +1236,18 @@ class SMTP(asyncio.StreamReaderProtocol):
         self.maindata.smtpd_port = self.session.peer[1]
         self.maindata.smtpd_gfl = self.session.glb_filter_list
         self.maindata.address_configuration = self.address_configuration
-        self.maindata.cid = ENCODED_BASE("{}{}{}".format(self.maindata.date_string,self.maindata.smtpd_ip,self.maindata.smtpd_port))
-        
+        self.maindata.cid = self.cid
+
         if self.session.ssl is None:
             self.maindata.smtpd_starttls_status = False
         else:
             self.maindata.smtpd_starttls_status = True
             self.maindata.smtpd_starttls_cipher = self.session.ssl['cipher']
-        
+
         self.maindata.smtpd_hostname = self.session.host_name
         self.maindata.smtpd_extended_smtp = self.session.extended_smtp
         self.maindata.smtpd_proxy_data = self.session.proxy_data
-        
-        
+
         mail_options = addrparams.upper().split()
         params = self._getparams(mail_options)
         if params is None:
@@ -1397,99 +1288,124 @@ class SMTP(asyncio.StreamReaderProtocol):
                 pass
             else:
                 self.envelope.mail_from = address
-            
+
             self.envelope.mail_options.extend(mail_options)
-            
+
             self.maindata.smtpd_mail_from = self.envelope.mail_from
             self.maindata.smtpd_mail_options = self.envelope.mail_options
             self.maindata.smtpd_smtp_utf8 = self.envelope.smtp_utf8
-            
-            
-            #############################################
-            #         SPF CHECK                                                         #
-            #############################################
-        
-            if "ignore_spf" not in self.session.glb_filter_list and self.maindata.smtpd_mail_from != "":
-                spf_result = check2(i=self.maindata.smtpd_ip,s=self.maindata.smtpd_mail_from,h="",timeout=3)
-                logger.info("SPF CHECK: mail from: {}, host: {} is {}.".format(self.maindata.smtpd_mail_from, self.session.peer[0], spf_result[0]))
+
+            """ CHECK GLOBAL FILTER LIST ignore_greylite """
+            j_config = GET_CONF_FROM_MEM(self.address_configuration)
+            if "ignore_greylite" not in self.session.glb_filter_list \
+                    and j_config['node']['type'] == "incomming" \
+                    and VALIDATION_PRIVATE_IP(self.session.peer[0]):
+                logger.info("{}: Check greylite start {}".format(self.cid,
+                                                                 self.session.peer[0]))
+                if GREYLITE_VALIDATION(self.session.peer[0], self.envelope.mail_from) is False:
+                    await self.push('451 4.7.1 Please try again later')
+                    logger.info("{}: Return: 451 4.7.1 Please try again later".format(self.cid))
+                    self.transport.close()
+                    return
+                else:
+                    logger.info("{}: Greylite pass {}".format(self.cid,
+                                                              self.session.peer[0]))
+            else:
+                logger.info("{}: Ignore check greylite {}".format(self.cid,
+                                                                  self.session.peer[0]))
+
+            """ SPF check """
+            if "ignore_spf" not in self.session.glb_filter_list \
+                    and self.maindata.smtpd_mail_from != "":
+                spf_result = check2(i=self.maindata.smtpd_ip,
+                                    s=self.maindata.smtpd_mail_from,
+                                    h="",
+                                    timeout=3)
+                logger.info("{}: SPF check: mail from: {}, host: {} is {}.".format(self.cid,
+                                                                                   self.maindata.smtpd_mail_from,
+                                                                                   self.session.peer[0],
+                                                                                   spf_result[0]))
                 self.maindata.smtpd_verdict['SPF_CHECK'] = {'mail_from': self.maindata.smtpd_mail_from,
                                                             'host': self.session.peer[0],
                                                             'status': spf_result[0]}
                 if spf_result[0] == "fail":
                     self.maindata.status = "blocked"
-                    #print(json.dumps(self.maindata.__dict__))
+                    # print(json.dumps(self.maindata.__dict__))
                     self.maindata.add_in_db()
                     await self.push('550 X.7.23 SPF validation failed')
+                    logger.info("{}: Return: 550 X.7.23 SPF validation failed".format(self.cid))
                     return
-                    
-                    
             else:
-                logger.info("SPF CHECK: spf ignored {}.".format(self.session.peer[0]))
+                logger.info("{}: SPF CHECK: spf ignored {}".format(self.cid, self.session.peer[0]))
             p_resolver = dns.resolver.Resolver()
             p_resolver.timeout = 2
             p_resolver.lifetime = 2
-            #############################################
-            #         PTR CHECK                                                         #
-            #############################################                
+
+            """ PTR CHECK """
             j_config = GET_CONF_FROM_MEM(self.address_configuration)
             reversed_dns = []
             if "ignore_ptr" not in self.session.glb_filter_list and j_config['node']['type'] == "incomming":
+                logger.info("{}: Check PTR start {}".format(self.cid, self.session.peer[0]))
                 key_pass = False
-                
                 rev_name = dns.reversename.from_address(self.session.peer[0])
                 try:
-                    reversed_dns = p_resolver.query(rev_name,"PTR")
+                    reversed_dns = p_resolver.query(rev_name, "PTR")
                 except dns.resolver.NXDOMAIN:
                     await self.push('501 Not found PTR')
+                    logger.info("{}: Return: 501 Not found PTR".format(self.cid))
                     return
                 except dns.name.EmptyLabel:
                     await self.push('501 Not found PTR')
+                    logger.info("{}: Return: 501 Not found PTR".format(self.cid))
                     return
                 except Exception:
                     key_pass = True
 
-                
-            if "ignore_helo" not in self.session.glb_filter_list and j_config['node']['type'] == "incomming" and (self.session.host_name != "" or self.session.host_name != "<>"):
+            if "ignore_helo" not in self.session.glb_filter_list \
+                    and j_config['node']['type'] == "incomming" \
+                    and (self.session.host_name != "" or self.session.host_name != "<>"):
                 ip_from_ptr = []
-                
+                logger.info("{}: Check HELO start {}".format(self.cid,
+                                                             self.session.peer[0]))
                 for row_reversed_dns in reversed_dns:
                     r = []
                     try:
                         r = p_resolver.query(str(row_reversed_dns), 'a')
-                    except:
+                    except Exception:
                         pass
-                    
+
                     for row_r in r:
                         ip_from_ptr.append(str(row_r))
-                
+
                 r = []
                 try:
                     r = p_resolver.query(self.session.host_name, 'a')
                 except dns.resolver.NXDOMAIN:
+                    logger.info("{}: Return: 501 5.7.0 Domain must resolve".format(self.cid))
                     await self.push('501 5.7.0 Domain must resolve')
                     return
                 except dns.name.EmptyLabel:
+                    logger.info("{}: Return: 501 5.1.8 You are not {}".format(self.cid,
+                                                                              self.session.host_name))
                     await self.push('501 5.1.8 You are not {}'.format(self.session.host_name))
                     return
                 except Exception:
-                    key_pass = True
+                    pass
 
                 key = False
                 for row_r in r:
                     if str(row_r) in ip_from_ptr:
                         key = True
                         break
-                
+
                 if not key:
+                    logger.info("{}: Return: 501 5.1.8 You are not {}".format(self.cid,
+                                                                              self.session.host_name))
                     await self.push('501 5.1.8 You are not {}'.format(self.session.host_name))
                     return
-                
-                    
-                
-            
-            
+
             status = '250 OK'
-        log.info('%r sender: %s', self.session.peer, address)
+        logger.info('%r sender: %s', self.session.peer, address)
         await self.push(status)
 
     @syntax('RCPT TO: <address>', extended=' [SP <mail-parameters>]')
@@ -1523,15 +1439,14 @@ class SMTP(asyncio.StreamReaderProtocol):
         # XXX currently there are no options we recognize.
         if len(params) > 0:
             return await self.push(
-                '555 RCPT TO parameters not recognized or not implemented'
-            )
+                '555 RCPT TO parameters not recognized or not implemented')
 
         status = await self._call_handler_hook('RCPT', address, rcpt_options)
         if status is MISSING:
             self.envelope.rcpt_tos.append(address)
             self.envelope.rcpt_options.extend(rcpt_options)
             status = '250 OK'
-        log.info('%r recip: %s', self.session.peer, address)
+        logger.info('%r recip: %s', self.session.peer, address)
         await self.push(status)
 
     @syntax('RSET')
@@ -1572,11 +1487,11 @@ class SMTP(asyncio.StreamReaderProtocol):
             # readuntil() can never raise asyncio.IncompleteReadError.
             try:
                 line: bytes = await self._reader.readuntil()
-                log.debug('DATA readline: %s', line)
+                # logger.debug('DATA readline: %s', line)
                 assert line.endswith(b'\n')
             except asyncio.CancelledError:
                 # The connection got reset during the DATA command.
-                log.info('Connection lost during DATA')
+                logger.info("{}: Connection lost during DATA".format(self.cid))
                 self._writer.close()
                 raise
             except asyncio.LimitOverrunError as e:

@@ -1,6 +1,4 @@
-import dns.resolver
-import json, os
-from datetime import timedelta, datetime
+from datetime import datetime
 from urllib.parse import urlparse
 from aiosmtpd.spf import check2
 
@@ -30,14 +28,15 @@ def SPAMHAUS_DBL_CHECK(code: str):
         result = "abused legit malware"
     elif code == "127.0.1.106":
         result = "abused legit botnet C&C"
-    
+
     return result
-    
+
+
 @logger.catch
 def SPAMHAUS_CHECK(md):
     start_time = datetime.now()
-    result = {'SBL':[],'XBL':[],'PBL':[],'DBL':[]}
-    
+    result = {'SBL': [], 'XBL': [], 'PBL': [], 'DBL': []}
+
     for row_ip in md.smtpd_body['ips']:
         if VALIDATION_PRIVATE_IP(row_ip):
             r = DNS_QUERY("{}.zen.spamhaus.org".format(ROTATE_IP(row_ip)), 'a')
@@ -48,7 +47,7 @@ def SPAMHAUS_CHECK(md):
                     result['XBL'].append(row_ip)
                 elif str(row_r) == "127.0.0.10" or str(row_r) == "127.0.0.11":
                     result['PBL'].append(row_ip)
-                
+
     for row_url in md.smtpd_body['urls']:
         row_urls_parse = urlparse(row_url)
         if row_urls_parse.netloc == "":
@@ -57,32 +56,34 @@ def SPAMHAUS_CHECK(md):
         for row_r in r:
             resDBL = SPAMHAUS_DBL_CHECK(str(row_r))
             if resDBL != "":
-                result['DBL'].append("{}:{}".format(row_urls_parse.netloc,resDBL))
+                result['DBL'].append("{}:{}".format(row_urls_parse.netloc, resDBL))
 
     for row_email in md.smtpd_body['emails']:
-        domain = row_email[row_email.find("@")+1:]
+        domain = row_email[row_email.find("@") + 1:]
         if domain == "":
             continue
         r = DNS_QUERY("{}.dbl.spamhaus.org".format(domain), 'a')
         for row_r in r:
             resDBL = SPAMHAUS_DBL_CHECK(str(row_r))
             if resDBL != "":
-                result['DBL'].append("{}:{}".format(domain,resDBL))
-    
+                result['DBL'].append("{}:{}".format(domain, resDBL))
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['SPAMHAUS_CHECK'] = result
+
 
 @logger.catch
 def R_SPF_FAIL(md):
     start_time = datetime.now()
     result = {'value': ""}
-    spf_result = check2(i=md.smtpd_ip,s=md.smtpd_body_headers['from'],h="",timeout=3)
+    spf_result = check2(i=md.smtpd_ip, s=md.smtpd_body_headers['from'], h="", timeout=3)
     result['value'] = spf_result[0]
-    
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['R_SPF_FAIL'] = result
-    
-@logger.catch    
+
+
+@logger.catch
 def DNSBL_SORBS_NET(md):
     start_time = datetime.now()
     result = {'status': False}
@@ -92,11 +93,12 @@ def DNSBL_SORBS_NET(md):
             for row_r in r:
                 if str(row_r) == "127.0.0.6":
                     result['status'] = True
-    
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['DNSBL_SORBS_NET'] = result
 
-@logger.catch    
+
+@logger.catch
 def DNSBL_MAILSPIKE_NET(md):
     start_time = datetime.now()
     result = {'status': False}
@@ -106,11 +108,12 @@ def DNSBL_MAILSPIKE_NET(md):
             for row_r in r:
                 if str(row_r) == "127.0.0.10" or str(row_r) == "127.0.0.11" or str(row_r) == "127.0.0.12":
                     result['status'] = True
-    
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['DNSBL_MAILSPIKE_NET'] = result
 
-@logger.catch    
+
+@logger.catch
 def DNSBL_SURBL(md):
     start_time = datetime.now()
     result = {'status': False, 'list': []}
@@ -123,7 +126,6 @@ def DNSBL_SURBL(md):
             if str(row_r) == "127.0.0.64":
                 result['status'] = True
                 result['list'].append(row_urls_parse.netloc)
-    
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['DNSBL_SURBL'] = result
-    

@@ -1,8 +1,8 @@
 box.cfg {
 	listen = 'localhost:3301';
 	background = true;
-	log = '/etc/tarantool/instances.enabled/1.log';
-	pid_file = '/etc/tarantool/instances.enabled/1.pid';
+	log = '/var/log/tarantool/cur.log';
+	pid_file = '/var/run/tarantool/start_config.pid';
 
 	io_collect_interval = nil;
 	readahead = 16320;
@@ -20,7 +20,7 @@ box.cfg {
 	checkpoint_interval = 60 * 60; -- one hour
 	checkpoint_count = 6;
 
-	log_level = 7;
+	log_level = 5;
 }
 
 
@@ -144,10 +144,4 @@ box.once("bootstrap", function()
 
 end)
 
-box.schema.user.passwd('admin', 'vDJg5MNFUs')
-
-local console = require('console')
-console.start()
-
-
-
+box.schema.user.passwd('admin', 'yFtLch8hUe')
