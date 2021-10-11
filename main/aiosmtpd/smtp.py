@@ -63,6 +63,7 @@ class _DataState(enum.Enum):
     TOO_LONG = enum.auto()
     TOO_MUCH = enum.auto()
 
+
 AuthCallbackType = Callable[[str, bytes, bytes], bool]
 AuthenticatorType = Callable[["SMTP", "Session", "Envelope", str, Any], "AuthResult"]
 AuthMechanismType = Callable[["SMTP", List[str]], Awaitable[Any]]
@@ -699,7 +700,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                 #             TLS_MANDATORY                                                         #
                 ###################################################
                 logger.info("{}: Check in TLS mandatory.".format(self.cid))
-                j_config = GET_CONF_FROM_MEM(self.address_configuration)
+                # j_config = GET_CONF_FROM_MEM(self.address_configuration)
                 if "tls_mandatory" in self.session.glb_filter_list \
                         and j_config['node']['type'] == "incomming":
                     if (self.require_starttls and not self._tls_protocol and command not in ALLOWED_BEFORE_STARTTLS):
@@ -728,8 +729,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                             "502 5.5.1 Too many unrecognized commands, goodbye.")
                         self.transport.close()
                         continue
-                    await self.push(
-                        f'500 Error: command "{command}" not recognized')
+                    await self.push(f'500 Error: command "{command}" not recognized')
                     continue
 
                 # Received a valid command, reset the timer.
@@ -1391,6 +1391,9 @@ class SMTP(asyncio.StreamReaderProtocol):
                 except dns.resolver.NXDOMAIN:
                     logger.info("{}: Return: 501 5.7.0 Domain must resolve".format(self.cid))
                     await self.push('501 5.7.0 Domain must resolve')
+                    self.maindata.status = "blocked"
+                    self.maindata.add_in_db()
+                    self.transport.close()
                     return
                 except dns.name.EmptyLabel:
                     logger.info("{}: Return: 501 5.1.8 You are not {}".format(self.cid,
@@ -1402,7 +1405,7 @@ class SMTP(asyncio.StreamReaderProtocol):
                     return
                 except Exception:
                     pass
-
+                """
                 key = False
                 for row_r in r:
                     if str(row_r) in ip_from_ptr:
@@ -1417,9 +1420,10 @@ class SMTP(asyncio.StreamReaderProtocol):
                     self.maindata.add_in_db()
                     self.transport.close()
                     return
+                """
 
             status = '250 OK'
-        logger.info('%r sender: %s', self.session.peer, address)
+        # logger.info('%r sender: %s', self.session.peer, address)
         await self.push(status)
 
     @syntax('RCPT TO: <address>', extended=' [SP <mail-parameters>]')
@@ -1460,7 +1464,7 @@ class SMTP(asyncio.StreamReaderProtocol):
             self.envelope.rcpt_tos.append(address)
             self.envelope.rcpt_options.extend(rcpt_options)
             status = '250 OK'
-        logger.info('%r recip: %s', self.session.peer, address)
+        # logger.info('%r recip: %s', self.session.peer, address)
         await self.push(status)
 
     @syntax('RSET')

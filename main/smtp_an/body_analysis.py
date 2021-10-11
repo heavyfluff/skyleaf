@@ -5,7 +5,7 @@ import checkdmarc
 from loguru import logger
 
 
-def M_CHECKDMARC(md):
+def M_CHECKDMARC(md, j_config):
     #############################################################
     # https://domainaware.github.io/checkdmarc/checkdmarc.html# #
     #############################################################

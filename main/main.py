@@ -29,6 +29,7 @@ if __name__ == "__main__":
     """ INITILIZATION """
 
     logger.info("Starting initilization.")
+
     """
     while True:
         print("!")

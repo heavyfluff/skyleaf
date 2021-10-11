@@ -1,12 +1,37 @@
 import json
 
-from system.other import PIKA_CONNECTION, PIKA_PUBLISH, TARANTOOL_CONN, GET_CONF_FROM_MEM
+from system.other import (
+    PIKA_CONNECTION,
+    PIKA_PUBLISH,
+    TARANTOOL_CONN,
+    GET_CONF_FROM_MEM)
 from smtps.smtps import MAIL_SENDER
 from system.system_class import MainData
 from smtp_an.filter_list import FILTER_LIST
 from smtp_an.body_analysis import M_BODY_PARSING, M_CHECKDMARC
-from smtp_an.dnsbl_check import *
-from smtp_an.general_func import *
+from smtp_an.bayes import BAYES
+from smtp_an.dnsbl_check import (
+    SPAMHAUS_CHECK,
+    R_SPF_FAIL,
+    DNSBL_SORBS_NET,
+    DNSBL_MAILSPIKE_NET,
+    DNSBL_SURBL)
+from smtp_an.general_func import (
+    MISSING_TO,
+    MISSING_DATE,
+    MISSING_MID,
+    MISSING_SUBJECT,
+    SUBJ_ALL_CAPS,
+    FAKE_REPLAY,
+    FILE_EXTENTION_BLACK,
+    EMOJII_IN_SUBJECT,
+    FORGED_RECIPIENTS,
+    RISKY_COUNTRY,
+    FROM_NOT_MAIL_FROM,
+    MX_SENDER_CHECK,
+    GLOBAL_PROCESSING_TIME,
+    STOP_WORDS,
+    COUNTING_SCORE)
 
 from loguru import logger
 
@@ -16,9 +41,9 @@ def ANALYSIS_LEVEL_ONE(md):
     if not tarantool_space_status:
         raise ErrorConnectionTarantool('Tarantool error!')
     tr_result = space_file_binary.select(md.content_id)
-
+    j_config = GET_CONF_FROM_MEM(md.address_configuration)
     M_BODY_PARSING(tr_result[0][3], md)
-    result_checkdmarc = M_CHECKDMARC(md)
+    result_checkdmarc = M_CHECKDMARC(md, j_config)
 
     ###
     ###
@@ -28,18 +53,20 @@ def ANALYSIS_LEVEL_ONE(md):
 def ANALYSIS_LEVEL_TWO(md):
     j_config = GET_CONF_FROM_MEM(md.address_configuration)
     FILTER_LIST(md, j_config)
+    STOP_WORDS(md, j_config)
+    BAYES(md, j_config)
 
-    MISSING_TO(md)
-    MISSING_DATE(md)
-    MISSING_MID(md)
+    MISSING_TO(md, j_config)
+    MISSING_DATE(md, j_config)
+    MISSING_MID(md, j_config)
     MISSING_SUBJECT(md, j_config)
-    SUBJ_ALL_CAPS(md)
-    FAKE_REPLAY(md)
-    FILE_EXTENTION_BLACK(md)
-    EMOJII_IN_SUBJECT(md)
-    FORGED_RECIPIENTS(md)
+    SUBJ_ALL_CAPS(md, j_config)
+    FAKE_REPLAY(md, j_config)
+    FILE_EXTENTION_BLACK(md, j_config)
+    EMOJII_IN_SUBJECT(md, j_config)
+    FORGED_RECIPIENTS(md, j_config)
     RISKY_COUNTRY(md, j_config)
-    FROM_NOT_MAIL_FROM(md)
+    FROM_NOT_MAIL_FROM(md, j_config)
 
     ###
     ###
@@ -48,12 +75,12 @@ def ANALYSIS_LEVEL_TWO(md):
 
 def ANALYSIS_LEVEL_THREE(md):
     j_config = GET_CONF_FROM_MEM(md.address_configuration)
-    SPAMHAUS_CHECK(md)
-    MX_SENDER_CHECK(md)
-    R_SPF_FAIL(md)
-    DNSBL_SORBS_NET(md)
-    DNSBL_MAILSPIKE_NET(md)
-    DNSBL_SURBL(md)
+    SPAMHAUS_CHECK(md, j_config)
+    MX_SENDER_CHECK(md, j_config)
+    R_SPF_FAIL(md, j_config)
+    DNSBL_SORBS_NET(md, j_config)
+    DNSBL_MAILSPIKE_NET(md, j_config)
+    DNSBL_SURBL(md, j_config)
     ###
     ###
     ###

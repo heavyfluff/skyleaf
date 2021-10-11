@@ -1,0 +1,7 @@
+#!/bin/bash
+
+docker container stop skyleaf
+docker rm skyleaf
+docker image rm node
+docker build . -t node
+docker container run -p 25:25 -d --name skyleaf node

@@ -92,6 +92,16 @@ box.once("bootstrap", function()
 	})
 	greylite:create_index('primary', {unique=true, type='tree', parts={'value'}})
 
+	bayes = box.schema.create_space('bayes')
+	bayes:format({
+	{name='key', type='string'},
+	{name='count_spam', type='integer'},
+	{name='count_ham', type='integer'},
+	{name='update_date', type='integer'},
+	{name='normalization_date', type='integer'}
+	})
+	bayes:create_index('primary', {unique=true, type='tree', parts={'key'}})
+
 	queue_message = box.schema.create_space('queue_message', {engine='vinyl'})
 	queue_message:format({
 	{name='id', type='unsigned'},

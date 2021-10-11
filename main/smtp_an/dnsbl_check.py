@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 from aiosmtpd.spf import check2
 
 from smtp_an.general_func import VALIDATION_PRIVATE_IP, ROTATE_IP, DNS_QUERY
+from system.other import ADD_SCORE_FROM_CONFIG
 
 from loguru import logger
 
@@ -33,9 +34,9 @@ def SPAMHAUS_DBL_CHECK(code: str):
 
 
 @logger.catch
-def SPAMHAUS_CHECK(md):
+def SPAMHAUS_CHECK(md, j_config):
     start_time = datetime.now()
-    result = {'SBL': [], 'XBL': [], 'PBL': [], 'DBL': []}
+    result = {'SBL': [], 'XBL': [], 'PBL': [], 'DBL': [], 'score': 0}
 
     for row_ip in md.smtpd_body['ips']:
         if VALIDATION_PRIVATE_IP(row_ip):
@@ -68,55 +69,68 @@ def SPAMHAUS_CHECK(md):
             if resDBL != "":
                 result['DBL'].append("{}:{}".format(domain, resDBL))
 
+    if len(result['DBL']) > 0:
+        result['score'] += ADD_SCORE_FROM_CONFIG(j_config, "SPAMHAUS_DBL")
+    if len(result['SBL']) > 0:
+        result['score'] += ADD_SCORE_FROM_CONFIG(j_config, "SPAMHAUS_SBL")
+    if len(result['PBL']) > 0:
+        result['score'] += ADD_SCORE_FROM_CONFIG(j_config, "SPAMHAUS_PBL")
+    if len(result['XBL']) > 0:
+        result['score'] += ADD_SCORE_FROM_CONFIG(j_config, "SPAMHAUS_XBL")
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['SPAMHAUS_CHECK'] = result
 
 
 @logger.catch
-def R_SPF_FAIL(md):
+def R_SPF_FAIL(md, j_config):
     start_time = datetime.now()
-    result = {'value': ""}
+    result = {'value': "", 'score': 0}
     spf_result = check2(i=md.smtpd_ip, s=md.smtpd_body_headers['from'], h="", timeout=3)
     result['value'] = spf_result[0]
+    if spf_result[0] == "fail":
+        result['score'] = ADD_SCORE_FROM_CONFIG(j_config, "R_SPF_FAIL")
 
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['R_SPF_FAIL'] = result
 
 
 @logger.catch
-def DNSBL_SORBS_NET(md):
+def DNSBL_SORBS_NET(md, j_config):
     start_time = datetime.now()
-    result = {'status': False}
+    result = {'status': False, 'score': 0}
     for row_ip in md.smtpd_body['ips']:
         if VALIDATION_PRIVATE_IP(row_ip):
             r = DNS_QUERY("{}.dnsbl.sorbs.net".format(ROTATE_IP(row_ip)), 'a')
             for row_r in r:
                 if str(row_r) == "127.0.0.6":
                     result['status'] = True
+                    result['score'] = ADD_SCORE_FROM_CONFIG(j_config, "DNSBL_SORBS_NET")
 
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['DNSBL_SORBS_NET'] = result
 
 
 @logger.catch
-def DNSBL_MAILSPIKE_NET(md):
+def DNSBL_MAILSPIKE_NET(md, j_config):
     start_time = datetime.now()
-    result = {'status': False}
+    result = {'status': False, 'score': 0}
     for row_ip in md.smtpd_body['ips']:
         if VALIDATION_PRIVATE_IP(row_ip):
             r = DNS_QUERY("{}.bl.mailspike.net".format(ROTATE_IP(row_ip)), 'a')
             for row_r in r:
                 if str(row_r) == "127.0.0.10" or str(row_r) == "127.0.0.11" or str(row_r) == "127.0.0.12":
                     result['status'] = True
+                    result['score'] = ADD_SCORE_FROM_CONFIG(j_config, "DNSBL_MAILSPIKE_NET")
 
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['DNSBL_MAILSPIKE_NET'] = result
 
 
 @logger.catch
-def DNSBL_SURBL(md):
+def DNSBL_SURBL(md, j_config):
     start_time = datetime.now()
-    result = {'status': False, 'list': []}
+    result = {'status': False, 'list': [], 'score': 0}
     for row_url in md.smtpd_body['urls']:
         row_urls_parse = urlparse(row_url)
         if row_urls_parse.netloc == "":
@@ -126,6 +140,6 @@ def DNSBL_SURBL(md):
             if str(row_r) == "127.0.0.64":
                 result['status'] = True
                 result['list'].append(row_urls_parse.netloc)
-
+                result['score'] = ADD_SCORE_FROM_CONFIG(j_config, "DNSBL_SURBL")
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['DNSBL_SURBL'] = result
