@@ -3,8 +3,23 @@ from datetime import datetime
 import socket
 from smtp_an.general_const import file_extention_balck_list, emoji_list, risky_country, stop_words_list
 from system.other import ADD_SCORE_FROM_CONFIG
+import string
 
 from loguru import logger
+
+
+@logger.catch
+def BAYES_FROMAT_STRING(data: str) -> list:
+    text = data.translate(str.maketrans('', '', string.punctuation))
+    text = text.translate(text.maketrans('\r\n', '  '))
+    text = text.lower()
+
+    wl = text.split()
+    result = []
+    for row in wl:
+        if len(row) > 2:
+            result.append(row)
+    return result
 
 
 @logger.catch
