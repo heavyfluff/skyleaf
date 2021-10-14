@@ -166,7 +166,7 @@ def MAIL_SENDER(md):
                         SERVER_LOG_ADD_ROW(10001, "Exception", now, row_address)
 
     md.add_in_db()
-    print(json.dumps(md.__dict__))
+    print(json.dumps(md.__dict__, indent=4))
 
     del byte_data
     return

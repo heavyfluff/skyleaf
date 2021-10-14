@@ -32,14 +32,13 @@ def GET_CONF_FROM_MEM(address_in_mem):
 
     bytes = shm.buf.tobytes()
     str_conf = bytes.decode()
-    point = str_conf.rfind("}") + 1
+    point = str_conf.rfind('}"') + 2
     str_conf = str_conf[:point]
 
     try:
-        result = json.loads(str_conf)
+        result = json.loads(json.loads(str_conf))
     except Exception as e:
         logger.error(str(e))
-
     shm.close()
 
     return result
@@ -52,8 +51,8 @@ def TARANTOOL_CONN(space):
     try:
         connection = tarantool.connect("127.0.0.1",
                                        3301,
-                                       user=os.environ['TARANTOOL_USER'],
-                                       password=os.environ['TARANTOOL_PASSWORD'])
+                                       user="admin",
+                                       password="admin")
         link_space = connection.space(space)
         status = True
     except Exception as e:
@@ -85,7 +84,8 @@ def PIKA_CONNECTION(queue_name):
     connection = None
     channel = None
     try:
-        PIKACREDENTIALS = pika.PlainCredentials(os.environ['RABBITMQ_USER'], os.environ['RABBITMQ_PASSWORD'])
+        # PIKACREDENTIALS = pika.PlainCredentials(os.environ['RABBITMQ_USER'], os.environ['RABBITMQ_PASSWORD'])
+        PIKACREDENTIALS = pika.PlainCredentials("guest", "guest")
         PIKAPARAMETERS = pika.ConnectionParameters("127.0.0.1", 5672, '/', PIKACREDENTIALS)
     except Exception as e:
         logger.error(str(e))

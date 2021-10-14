@@ -9,8 +9,8 @@ def START_RABBITMQ():
     # os.environ['RABBITMQ_USER'] = GET_USER(8)
     # os.environ['RABBITMQ_PASSWORD'] = GET_PASSWORD(8)
     # logger.info("Generate password for rabbitmq.")
-    os.environ['RABBITMQ_USER'] = "guest"
-    os.environ['RABBITMQ_PASSWORD'] = "guest"
+    # os.environ['RABBITMQ_USER'] = "guest"
+    # os.environ['RABBITMQ_PASSWORD'] = "guest"
     os.system('/etc/init.d/rabbitmq-server start')
     # os.system('service rabbitmq-server start')
 

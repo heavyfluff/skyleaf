@@ -6,8 +6,8 @@ from initialization_system.generate_credential import GET_PASSWORD
 
 @logger.catch
 def START_TARANTOOL():
-    os.environ['TARANTOOL_USER'] = "admin"
-    os.environ['TARANTOOL_PASSWORD'] = GET_PASSWORD(10)
+    # os.environ['TARANTOOL_USER'] = "admin"
+    # os.environ['TARANTOOL_PASSWORD'] = GET_PASSWORD(10)
     logger.info("Generate password for tarantool.")
 
     try:
@@ -17,7 +17,8 @@ def START_TARANTOOL():
                 if line.find("box.schema.user.passwd('admin'") == -1:
                     config_file.append(line)
                 else:
-                    config_file.append("box.schema.user.passwd('admin', '{}')\n".format(os.environ['TARANTOOL_PASSWORD']))
+                    # config_file.append("box.schema.user.passwd('admin', '{}')\n".format(os.environ['TARANTOOL_PASSWORD']))
+                    config_file.append("box.schema.user.passwd('admin', '{}')\n".format("admin"))
 
         with open("/etc/tarantool/instances.enabled/start_config.lua", 'w') as f:
             for line in config_file:
