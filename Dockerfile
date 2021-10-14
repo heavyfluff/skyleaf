@@ -15,7 +15,7 @@ RUN curl -L https://tarantool.io/RHcazFf/release/2.8/installer.sh | bash \
 	&& apt install -y tarantool
 
 RUN ulimit -n 10240
-RUN pip3 install dnspython public attrs pika psycopg2-binary tarantool mail-parser urlparse2 dkimpy checkdmarc loguru
+RUN pip3 install dnspython public attrs pika psycopg2-binary tarantool mail-parser urlparse2 dkimpy checkdmarc loguru pydantic
 
 RUN mkdir /main
 RUN chmod 777 /run
