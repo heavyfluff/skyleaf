@@ -25,19 +25,34 @@ def BAYES(md, j_config: dict):
     if tarantool_space_status is False:
         result['error'] = "Erorr connection tarntool."
         logger.error("Erorr connection tarntool.")
+    else:
+        spam_reputation_list = []
+        ham_reputation_list = []
+        for row_word in words:
+            tr_result = space_bayes.select(row_word)
+            if tr_result.rowcount > 0:
+                spam_reputation_list.append(tr_result[0][1] / (tr_result[0][1] + tr_result[0][2]))
+                ham_reputation_list.append(tr_result[0][2] / (tr_result[0][1] + tr_result[0][2]))
+            else:
+                spam_reputation_list.append(0)
+                ham_reputation_list.append(0)
 
-    tr_result = space_bayes.call('box.space.bayes:len', ())
-    count_all_words = tr_result[0]
+        i = 0
+        coef_spam = 0
+        coef_ham = 0
+        while i < len(words):
+            coef_spam += spam_reputation_list[i]
+            coef_ham += ham_reputation_list[i]
+            i += 1
 
-    summ_factor = 0
-    for row_word in words:
-        tr_result = space_bayes.select(row_word)
-        if tr_result > 0:
-            summ_factor += (tr_result[0][1] / (tr_result[0][1] + tr_result[0][2])) - 0.5
-    result_factor = round((summ_factor / count_all_words), 2)
-    score_max = ADD_SCORE_FROM_CONFIG(j_config, "BAYES_MAX")
-    score_min = ADD_SCORE_FROM_CONFIG(j_config, "BAYES_MIN")
-    score_ava = (score_max + score_min) / 2
-    result['score'] = score_ava * result_factor
+        result['spam'] = coef_spam / len(words)
+        result['ham'] = coef_ham / len(words)
+        if result['spam'] == result['ham']:
+            result['score'] = 0
+        elif result['spam'] > result['ham']:
+            result['score'] = int(result['spam'] * ADD_SCORE_FROM_CONFIG(j_config, "BAYES_MAX"))
+        elif result['spam'] < result['ham']:
+            result['score'] = int(result['ham'] * ADD_SCORE_FROM_CONFIG(j_config, "BAYES_MIN"))
+
     result['processing_time'] = md.count_time(start_time)
     md.smtpa_verdict['BAYES'] = result

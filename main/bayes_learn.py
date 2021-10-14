@@ -33,7 +33,7 @@ def startLearn() -> str:
     file_byte_data = b""
     try:
         f = open(sys.argv[2], "rb")
-        file_byte_data
+        file_byte_data = f.read()
         f.close()
     except Exception:
         logger.error("Error. Can't open file {}".format(sys.argv[2]))
@@ -41,6 +41,7 @@ def startLearn() -> str:
         return result
 
     mail = mailparser.mailparser.parse_from_bytes(file_byte_data)
+
     words = BAYES_FROMAT_STRING(mail.text_plain[0])
 
     space_bayes, tarantool_space_status = TARANTOOL_CONN("bayes")
@@ -52,14 +53,14 @@ def startLearn() -> str:
     for row_word in words:
         tr_result = space_bayes.select(row_word)
         if tr_result.rowcount > 0:
-            if sys.argv[1] != "spam":
+            if sys.argv[1] == "spam":
                 tr_result = space_bayes.update(row_word, [('+', 1, 1), ('=', 3, tmp_date)])
-            elif sys.argv[1] != "ham":
+            elif sys.argv[1] == "ham":
                 tr_result = space_bayes.update(row_word, [('+', 2, 1), ('=', 3, tmp_date)])
         else:
-            if sys.argv[1] != "spam":
+            if sys.argv[1] == "spam":
                 tr_result = space_bayes.insert((row_word, 1, 0, tmp_date, tmp_date))
-            elif sys.argv[1] != "ham":
+            elif sys.argv[1] == "ham":
                 tr_result = space_bayes.insert((row_word, 0, 1, tmp_date, tmp_date))
         logger.info(str(tr_result[0]))
     result = "Learn comlited."

@@ -88,7 +88,7 @@ class ConfigDomainTemplate(BaseModel):
     description: str
     thresholds: ConfigThresholds
     organisation_id: int
-    from_ip_pool: Dict[str, list[str]]
+    from_ip_pool: Dict[str, List[str]]
 
 
 class MainConfig(BaseModel):

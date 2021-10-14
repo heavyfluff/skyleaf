@@ -54,10 +54,9 @@ if __name__ == "__main__":
     sleep(10)
     while True:
         j_config = GET_CONF_FROM_MEM(address_in_mem)
-        if "version" in j_config:
-            if j_config['version'] != 0:
-                logger.info("Upload configuration successfully")
-                break
+        if j_config['version'] != 0:
+            logger.info("Upload configuration successfully")
+            break
 
         sleep(10)
 
